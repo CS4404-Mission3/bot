@@ -109,23 +109,94 @@ class Message:
 
 
 class Frame:
-    def __init__(self):
-        self.payload = bitarray.bitarray()
-        self.payload.extend([0, 0, 0, 0, 0, 0, 0, 0])
+    def __init__(self, pkt: Packet):
+        self.payload = bitarray.bitarray([0, 0, 0, 0, 0, 0, 0, 0])
+        self.codes = [0, 0, 0, 0, 0, 0, 0, 0]
         self.when = time.time()
+        self.flag = 0
+        # Flags: 0- Data 1- Pre-amble 2- Post-amble 3- invalid
+        self.base_port = 5350
+        self.finalized = False
+        self.parse(pkt)
+
+    def parse(self, pkt: Packet):
+        position = pkt["UDP"].sport - self.base_port
+        self.payload[position] = 1
+        self.codes[position] = pkt["DNS"].qd.qclass
+
+    def finalize(self):
+        datapacket = True
+        for i in self.codes:
+            if i != 255 and i != 0:
+                datapacket = False
+                # Pre-/Post-ambles will have non-255 codes as they indicate checksums
+        if datapacket:
+            self.flag = 0
+        else:
+            # Either a pre- or post-amble
+            if self.payload.tobytes() == b'\xaa' or self.payload.tobytes() == b'\x55':
+                self.flag = 1
+            elif self.payload.all() == 1 and self.codes.count(1) == 8:
+                self.flag = 2
+            else:
+                self.flag = 3
+                logging.warning("Got bad frame!")
 
 
 class Stream:
-    def __init__(self):
+    def __init__(self, pkt: Packet):
         self.frames: list[Frame]
-        self.frames = []
+        self.frames = [Frame(pkt)]
+        self.addr = pkt["IP"].src
+        self.payload = ""
+        self.checksum = bitarray.bitarray()
+        self.checksum.frombytes(b'\x00\x00')
+
+    def handle_packet(self, pkt: Packet):
+        newframe = True
+        for i in self.frames:
+            if abs(time.time() - i.when) <= 0.25:
+                newframe = False
+                # if frame is still the active frame
+                i.parse(pkt)
+            elif not i.finalized:
+                # if frame is inactive but unprocessed
+                i.finalize()
+                if i.flag == 1:
+                    index = -1
+                    for c in i.codes:
+                        index += 1
+                        val1 = 0
+                        val2 = 0
+                        # decode symbols to binary
+                        match c:
+                            case 1:
+                                pass
+                                # values are already set properly
+                            case 2:
+                                val1 = 1
+                            case 3:
+                                val2 = 1
+                            case 4:
+                                val1 = 1
+                                val2 = 1
+                            case _:
+                                logging.error("Invalid qclass for checksum!")
+                                break
+                        self.checksum[2 * index] = val1
+                        self.checksum[2 * index + 1] = val2
+
+                elif i.flag == 3:
+                    self.frames.remove(i)
+        if newframe:
+            self.frames.append(Frame(pkt))
 
 
 class Receiver:
     def __init__(self):
         self.messages = []
         self.tlock = threading.Lock()
-        self.base_port = 5350
+        self.streams = []
 
     def packethandler(self, pkt: Packet):
         pass

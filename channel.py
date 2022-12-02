@@ -136,7 +136,7 @@ class Frame:
             # Either a pre- or post-amble
             if self.payload.tobytes() == b'\xaa' or self.payload.tobytes() == b'\x55':
                 self.flag = 1
-            elif self.payload.all(1) and self.codes.count(1) == 8:
+            elif self.payload.all() and self.codes.count(1) == 8:
                 self.flag = 2
             else:
                 self.flag = 3
@@ -223,7 +223,7 @@ class Stream:
         calculated = calcsum(bitarray.bitarray(self.payload))
         if calculated != self.checksum:
             logging.error("Checksum failed!")
-            logging.debug("Expected sum: {}\n Got sum: {}".format(self.checksum,calculated))
+            logging.debug("Expected sum: {}\n Got sum: {}".format(self.checksum, calculated))
             self.handle_bad_data()
             return
         logging.debug("Got good checksum")
@@ -234,17 +234,31 @@ class Stream:
         self.valid = False
 
 
-
 class Receiver:
     def __init__(self):
         self.messages = []
         self.tlock = threading.Lock()
+        self.streams: list[Stream]
         self.streams = []
 
     def packethandler(self, pkt: Packet):
-        pass
+        # Figure if packet pertains to us
+        if pkt.lastlayer().name != "DNS" or not pkt.haslayer("UDP") or not pkt.haslayer("IP"):
+            return
+        newstream = True
+        mess: Stream
+        for mess in self.streams:
+            if mess.addr == pkt["IP"].src:
+                newstream = False
+                self.tlock.acquire(blocking=True, timeout=0.25)
+                mess.handle_packet(pkt)
+                self.tlock.release()
+        if newstream:
+            self.tlock.acquire()
+            self.messages.append(Stream(pkt))
+            self.tlock.release()
 
     def start(self):
         """Initiate packet sniffing, should be launched in its own thread"""
-        sniff(prn=self.packethandler())
+        sniff(prn=self.packethandler)
         logging.warning("Communication Sniffer exited!")

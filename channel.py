@@ -136,7 +136,7 @@ class Frame:
             # Either a pre- or post-amble
             if self.payload.tobytes() == b'\xaa' or self.payload.tobytes() == b'\x55':
                 self.flag = 1
-            elif self.payload.all() == 1 and self.codes.count(1) == 8:
+            elif self.payload.all(1) and self.codes.count(1) == 8:
                 self.flag = 2
             else:
                 self.flag = 3
@@ -151,6 +151,8 @@ class Stream:
         self.payload = ""
         self.checksum = bitarray.bitarray()
         self.checksum.frombytes(b'\x00\x00')
+        self.finalized = False
+        self.valid = True
 
     def handle_packet(self, pkt: Packet):
         newframe = True
@@ -162,34 +164,75 @@ class Stream:
             elif not i.finalized:
                 # if frame is inactive but unprocessed
                 i.finalize()
-                if i.flag == 1:
-                    index = -1
-                    for c in i.codes:
-                        index += 1
-                        val1 = 0
-                        val2 = 0
-                        # decode symbols to binary
-                        match c:
-                            case 1:
-                                pass
-                                # values are already set properly
-                            case 2:
-                                val1 = 1
-                            case 3:
-                                val2 = 1
-                            case 4:
-                                val1 = 1
-                                val2 = 1
-                            case _:
-                                logging.error("Invalid qclass for checksum!")
-                                break
-                        self.checksum[2 * index] = val1
-                        self.checksum[2 * index + 1] = val2
-
-                elif i.flag == 3:
-                    self.frames.remove(i)
+                match i.flag:
+                    case 1:
+                        index = -1
+                        for c in i.codes:
+                            index += 1
+                            val1 = 0
+                            val2 = 0
+                            # decode symbols to binary
+                            match c:
+                                case 1:
+                                    pass
+                                    # values are already set properly
+                                case 2:
+                                    val1 = 1
+                                case 3:
+                                    val2 = 1
+                                case 4:
+                                    val1 = 1
+                                    val2 = 1
+                                case _:
+                                    logging.error("Invalid qclass for checksum!")
+                                    break
+                            self.checksum[2 * index] = val1
+                            self.checksum[2 * index + 1] = val2
+                    case 2:
+                        self.finalize()
+                    case 3:
+                        self.frames.remove(i)
+                    case _:
+                        pass
         if newframe:
             self.frames.append(Frame(pkt))
+
+    def finalize(self):
+        """Stream final processing when terminator received"""
+        self.finalized = True
+        lasttime = 0
+        for i in self.frames:
+            # only parse data frames
+            if i.flag != 0:
+                continue
+            try:
+                data: str
+                data = i.payload.tobytes().decode()
+            except UnicodeError:
+                logging.error("Bad data frame!")
+                self.handle_bad_data()
+                return
+            self.payload += data
+            # Give it a big rx window tolerance
+            if lasttime != 0 and i.when - lasttime > 0.4:
+                logging.error("Packet data out of order")
+                self.handle_bad_data()
+                return
+            lasttime = i.when
+        # Check integrity of received data
+        calculated = calcsum(bitarray.bitarray(self.payload))
+        if calculated != self.checksum:
+            logging.error("Checksum failed!")
+            logging.debug("Expected sum: {}\n Got sum: {}".format(self.checksum,calculated))
+            self.handle_bad_data()
+            return
+        logging.debug("Got good checksum")
+        logging.info("Completed stream from {}".format(self.addr))
+
+    def handle_bad_data(self):
+        logging.error("Stream from {} was corrupted. Discarding data.".format(self.addr))
+        self.valid = False
+
 
 
 class Receiver:

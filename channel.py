@@ -260,5 +260,9 @@ class Receiver:
 
     def start(self):
         """Initiate packet sniffing, should be launched in its own thread"""
-        sniff(prn=self.packethandler)
+        try:
+            sniff(prn=self.packethandler)
+        except PermissionError:
+            logging.error("Insufficient permissions for packet capture! Try running with sudo.")
+            exit(1)
         logging.warning("Communication Sniffer exited!")

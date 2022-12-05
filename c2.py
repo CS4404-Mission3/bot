@@ -1,8 +1,11 @@
 #!/usr/bin/python3
 import shutil
-
+import threading
 import channel
 
+print("initializing communications...")
+rx = channel.Receiver()
+rx_thread = threading.Thread(target=rx.start)
 
 
 def show_header():
@@ -32,7 +35,7 @@ def main_menu():
             print("\n\nGoodbye.\n")
             exit()
         case _:
-            print("Bad input! Please enter a number from 1 to 5. \n\n")
+            print("\n\n\nBad input! Please enter a number from 1 to 5. \n\n")
             main_menu()
 
 

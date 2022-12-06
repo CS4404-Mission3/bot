@@ -101,7 +101,7 @@ class Message:
                 # Don't transmit packet if payload is 0
                 if payload == 0:
                     continue
-                p = mkpkt(self.base_port + i, 1)
+                p = mkpkt(self.base_port + i, 255)
                 send(p)
             logging.debug("Successfully send frame")
         self.postabmle()
@@ -232,19 +232,29 @@ class Stream:
     def handle_bad_data(self):
         logging.error("Stream from {} was corrupted. Discarding data.".format(self.addr))
         self.valid = False
+        # Ask for packet retransmission
+        a = threading.Thread(target=Message("rtm").send)
+        a.start()
+        logging.info("requested retransmission of stream")
 
 
 class Receiver:
+    # TODO: Parse checksum twice
     def __init__(self):
         self.messages = []
         self.tlock = threading.Lock()
         self.streams: list[Stream]
         self.streams = []
+        self.known_hosts = []
 
     def packethandler(self, pkt: Packet):
         # Figure if packet pertains to us
-        if pkt.lastlayer().name != "DNS" or not pkt.haslayer("UDP") or not pkt.haslayer("IP"):
+        if pkt.lastlayer().name != "DNS" or not pkt.haslayer("UDP"):
+            if pkt.haslayer("IP"):
+                # Make a list of every communicative IP on the network
+                self.known_hosts.append(pkt["IP"].src)
             return
+
         newstream = True
         mess: Stream
         for mess in self.streams:

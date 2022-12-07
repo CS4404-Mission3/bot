@@ -28,7 +28,9 @@ The preamble also serves as a synchronization source, as all frames are transmit
 ### Post-amble
 The post-amble is 1 frame of value `0xFF` and indicates the end of transmission. Each MDNS packet in the frame has a `qclass` of 1.
 
+### Packet Contents
+First character specifies the type of communication, command or response, indicated by a lower-case c and r respectively. The next 4 characters are the bot ID for which the message is destined or from which the response
+originated. Following is type-specific payload.
+
 # Payload
 
-The intent of c2 for this bot is to allow the controller to run commands on the targeted system. This may be seen as a 
-malicious payload, but it's really just slower, worse SSH. This has not been implemented yet and is subject to change.

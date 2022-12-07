@@ -273,6 +273,7 @@ class Receiver:
             self.tlock.release()
 
     def start(self):
+        logging.info("init sniffer")
         """Initiate packet sniffing, should be launched in its own thread"""
         try:
             sniff(prn=self.packethandler)

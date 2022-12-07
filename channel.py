@@ -151,6 +151,7 @@ class Stream:
         self.payload = ""
         self.checksum = bitarray.bitarray()
         self.checksum.frombytes(b'\x00\x00')
+        self.checksum2 = self.checksum.copy()
         self.finalized = False
         self.valid = True
 
@@ -186,8 +187,12 @@ class Stream:
                                 case _:
                                     logging.error("Invalid qclass for checksum!")
                                     break
-                            self.checksum[2 * index] = val1
-                            self.checksum[2 * index + 1] = val2
+                            if self.checksum[2 * index] == 0 and self.checksum[2 * index + 1] == 0:
+                                self.checksum[2 * index] = val1
+                                self.checksum[2 * index + 1] = val2
+                            else:
+                                self.checksum2[2 * index] = val1
+                                self.checksum2[2 * index + 1] = val2
                     case 2:
                         self.finalize()
                     case 3:
@@ -221,7 +226,7 @@ class Stream:
             lasttime = i.when
         # Check integrity of received data
         calculated = calcsum(bitarray.bitarray(self.payload))
-        if calculated != self.checksum:
+        if calculated != self.checksum or calculated != self.checksum2:
             logging.error("Checksum failed!")
             logging.debug("Expected sum: {}\n Got sum: {}".format(self.checksum, calculated))
             self.handle_bad_data()
@@ -239,7 +244,6 @@ class Stream:
 
 
 class Receiver:
-    # TODO: Parse checksum twice
     def __init__(self):
         self.messages = []
         self.tlock = threading.Lock()

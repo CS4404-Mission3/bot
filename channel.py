@@ -130,11 +130,11 @@ class Frame:
             # Either a pre- or post-amble
             if self.payload.tobytes() == b'\xaa' or self.payload.tobytes() == b'\x55':
                 self.flag = 1
-            elif self.payload.all() and self.codes.count(1) == 8:
+            elif self.payload.count(1) == 8 and self.codes.count(1) == 8:
                 self.flag = 2
             else:
                 self.flag = 3
-                logging.warning("Got bad frame!")
+                logging.warning("Got bad frame! - {}".format(self.payload))
 
 
 class Stream:

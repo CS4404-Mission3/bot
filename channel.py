@@ -77,15 +77,10 @@ class Message:
                 send(p)
 
     def postabmle(self):
-        # Transmit 0xFF 0xAA 0xFF 0xAA
-        for i in range(0, 4):
-            mask = i % 2
-            time.sleep(0.25)
-            for b in range(0, 8):
-                if b % 2 == mask:
-                    continue
-                p = mkpkt(self.base_port + b, 255)
-                send(p)
+        # Transmit 0xFF
+        for b in range(0, 8):
+            p = mkpkt(self.base_port + b, 1)
+            send(p)
 
     def send(self):
         self.preamble()

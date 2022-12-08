@@ -8,10 +8,8 @@ import sys
 print("initializing communications...")
 rx = channel.Receiver()
 rx_thread = threading.Thread(target=rx.start)
-if sys.argv[1] != "nocap":
+if len(sys.argv) >= 2 and sys.argv[1] != "nocap":
     rx_thread.start()
-else:
-    print("WARNING: Running in debug mode. Cannot receive communications.")
 
 
 class bot_obj:

@@ -16,7 +16,6 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 def mkpkt(srcprt: int, qclass: int) -> packet.Packet:
-    # TODO: make sure setting broadcast IP is enough or if we need to set broadcast MAC too
     myip = get_if_addr(conf.iface)
     # Construct query from raw bytes
     query = DNS(b'\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\t_services\x07_dns-sd\x04_udp\x05local\x00\x00\x0c'

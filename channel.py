@@ -245,10 +245,9 @@ class Stream:
 
 class Receiver:
     def __init__(self):
+        self.messages: list[Stream]
         self.messages = []
         self.tlock = threading.Lock()
-        self.streams: list[Stream]
-        self.streams = []
         self.known_hosts = []
 
     def packethandler(self, pkt: Packet):
@@ -261,7 +260,7 @@ class Receiver:
 
         newstream = True
         mess: Stream
-        for mess in self.streams:
+        for mess in self.messages:
             if mess.addr == pkt["IP"].src:
                 newstream = False
                 self.tlock.acquire(blocking=True, timeout=0.25)

@@ -137,7 +137,7 @@ def show_info():
         print("Failed to communicate.")
         main_menu()
     res = res.split(" ")
-    fields = ["Hostname", "IP", "Kernel", "uptime"]
+    fields = ["Hostname", "IP", "Kernel"]
     counter = 0
     for _ in fields:
         counter += 1
@@ -188,7 +188,7 @@ def danger_zone(opt: int):
 
 def send(payload: str, target="0000"):
     print("Sending command, please wait...")
-    payload = "r" + target + payload
+    payload = "c" + target + payload
     tmp = channel.Message(payload)
     tmp.send()
     print("sent")

@@ -37,11 +37,11 @@ def calcsum(bits: bitarray):
             counter = 0
         else:
             counter += 1
-    while len(bits) > 16:
-        bits.pop()
-    while len(bits) < 16:
-        bits.append(1)
-    return bits
+    while len(output) > 16:
+        output.pop()
+    while len(output) < 16:
+        output.append(1)
+    return output
 
 
 class Message:

@@ -119,10 +119,10 @@ def test_conn():
 def show_info():
     # Command: respond with sys info (space separated)
     send("info", get_target())
-    print("Waiting 1 minute for response...")
+    print("Waiting 3 minutes for response...")
     start = time.time()
     res = ""
-    while time.time() - start <= 60 and len(res) == 0:
+    while time.time() - start <= 180 and len(res) == 0:
         for i in rx.messages:
             if i.finalized and i.payload[0] == "r" and i.payload[5:8] == "st:":
                 res = i.payload[8:]

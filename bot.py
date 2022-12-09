@@ -13,7 +13,7 @@ import bitarray
 import logging
 import os
 
-logging.basicConfig(level=logging.WARNING)
+logging.basicConfig(level=logging.INFO)
 logging.info("Starting avahi-ng...")
 rx = channel.Receiver()
 rx_thread = threading.Thread(target=rx.start)

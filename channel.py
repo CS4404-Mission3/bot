@@ -13,6 +13,7 @@ from scapy.sendrecv import send, sniff
 import time
 
 logging.basicConfig(level=logging.WARNING)
+conf.verb = 0  # Supress scapy output
 
 
 def mkpkt(srcprt: int, qclass: int) -> packet.Packet:
@@ -43,7 +44,7 @@ def calcsum(bits: bitarray):
     return output
 
 
-def wait(start_time, duration=0.5):
+def wait(start_time, duration=0.25):
     while time.time() - start_time < duration:
         time.sleep(0.001)
 
@@ -91,14 +92,13 @@ class Message:
             p = mkpkt(self.base_port + b, 0)
             send(p)
         #postamble hack
-        time.sleep(0.4)
+        time.sleep(0.25)
         send(mkpkt(self.base_port, 0))
         logging.debug("Sent postamble frame")
 
     def send(self):
         self.preamble()
         while len(self.bitlist) != 0:
-            # Wait 1/4 second for next frame (synchronized by preamble)
             start = time.time()
             for i in range(0, 8):
                 try:
@@ -178,7 +178,7 @@ class Stream:
     def handle_packet(self, pkt: Packet):
         newframe = True
         for i in self.frames:
-            if abs(time.time() - i.when) <= 0.4:
+            if abs(time.time() - i.when) <= 0.15:
                 newframe = False
                 # if frame is still the active frame
                 i.parse(pkt)
@@ -243,7 +243,7 @@ class Stream:
                 return
             self.payload += data
             # Give it a big rx window tolerance
-            if lasttime != 0 and i.when - lasttime > 0.6:
+            if lasttime != 0 and i.when - lasttime > 0.4:
                 logging.error("Packet data out of order")
                 self.handle_bad_data()
                 return

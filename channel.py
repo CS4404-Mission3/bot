@@ -139,6 +139,7 @@ class Frame:
         self.codes[position] = pkt["DNS"].qd.qclass
 
     def finalize(self):
+        self.finalized = True
         datapacket = True
         postamble = True
         for i in range(0, 8):
@@ -155,7 +156,7 @@ class Frame:
         if datapacket:
             self.flag = 0
             logging.debug("got data frame")
-        elif postamble and self.payload.tobytes() == b'\xff':
+        elif postamble:
             self.flag = 2
             logging.debug("Got terminator frame")
         elif self.payload.tobytes() == b'\xaa' or self.payload.tobytes() == b'\x55':

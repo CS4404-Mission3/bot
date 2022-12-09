@@ -98,7 +98,7 @@ def test_conn():
     while time.time() - start < 30:
         for i in rx.messages:
             if i.finalized and i.payload[0] == "r" and i.payload[5:7] == "ok":
-                rx.tlock.aquire()
+                rx.tlock.acquire()
                 rx.messages.remove(i)
                 rx.tlock.release()
                 newbot = True

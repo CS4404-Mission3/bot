@@ -34,9 +34,8 @@ def calcsum(bits: bitarray):
         if counter == 0:
             output.append(i)
         elif counter == 15:
-            counter = 0
-        else:
-            counter += 1
+            counter = -1
+        counter += 1
     while len(output) > 16:
         output.pop()
     while len(output) < 16:
@@ -251,7 +250,7 @@ class Receiver:
         if not pkt.haslayer("IP"):
             return
         # Figure if packet pertains to us
-        if pkt.lastlayer().name != "DNS" or not pkt.haslayer("UDP"):
+        if pkt.lastlayer().name != "DNS" or not pkt.haslayer("UDP") or pkt["UDP"].dport != 5353:
             # Make a list of every communicative IP on the network
             self.known_hosts.append(pkt["IP"].src)
             return

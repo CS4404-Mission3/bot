@@ -43,9 +43,10 @@ def calcsum(bits: bitarray):
     return output
 
 
-def wait(start_time, duration = 0.5):
+def wait(start_time, duration=0.5):
     while time.time() - start_time < duration:
         time.sleep(0.001)
+
 
 class Message:
     def __init__(self, string: str):
@@ -62,6 +63,7 @@ class Message:
         while round(time.time(), 2) - round(time.time()) != 0.0:
             # wait until next second to start transmission
             time.sleep(0.005)
+        logging.debug("Started transmission at {}".format(time.time()))
         for i in range(0, 4):
             mask = i % 2
             start = time.time()
@@ -87,7 +89,7 @@ class Message:
                 self.sentpkts.append(p)  # TODO: REMOVE
                 send(p)
             wait(start)
-            logging.debug("sent preamble frame")
+        logging.debug("finished preamble at {}".format(time.time()))
 
     def postabmle(self):
         # Transmit 0xFF
@@ -117,13 +119,13 @@ class Message:
             logging.debug("Successfully send frame")
             wait(start)
         self.postabmle()
-        logging.info("Done transmitting!")
+        logging.info("Done transmitting at {}!".format(time.time()))
 
 
 class Frame:
     def __init__(self, pkt: Packet):
         self.payload = bitarray.bitarray([0, 0, 0, 0, 0, 0, 0, 0])
-        self.codes = [0, 0, 0, 0, 0, 0, 0, 0]
+        self.codes = [-1, -1, -1, -1, -1, -1, -1, -1]
         self.when = time.time()
         self.flag = 0
         # Flags: 0- Data 1- Pre-amble 2- Post-amble 3- invalid
@@ -139,25 +141,29 @@ class Frame:
     def finalize(self):
         datapacket = True
         postamble = True
-        for i in self.codes:
-            if i != 0:
+        for i in range(0, 8):
+            # Ignore values for which no packet was sent
+            if not self.payload[i]:
+                continue
+            if self.codes[i] != 255:
+                datapacket = False
+            if self.codes[i] != 0:
                 postamble = False
-                if i != 255:
-                    datapacket = False
+            if self.codes[i] == -1:
+                logging.error("No qclass!")
+
         if datapacket:
             self.flag = 0
             logging.debug("got data frame")
+        elif postamble and self.payload.tobytes() == b'\xff':
+            self.flag = 2
+            logging.debug("Got terminator frame")
+        elif self.payload.tobytes() == b'\xaa' or self.payload.tobytes() == b'\x55':
+            self.flag = 1
+            logging.debug("got preamble")
         else:
-            # Either a pre- or post-amble
-            if (self.payload.tobytes() == b'\xaa' or self.payload.tobytes() == b'\x55') and not postamble:
-                self.flag = 1
-                logging.debug("got preamble")
-            elif self.payload.tobytes() == b'\xff' and postamble:
-                self.flag = 2
-                logging.debug("Got terminator frame")
-            else:
-                self.flag = 3
-                logging.warning("Got bad frame! - {} with qclasses {}".format(self.payload, self.codes))
+            self.flag = 3
+            logging.warning("Got bad frame! - {} with qclasses {}".format(self.payload, self.codes))
 
 
 class Stream:
@@ -184,6 +190,8 @@ class Stream:
                 # if frame is inactive but unprocessed
                 i.finalize()
                 match i.flag:
+                    case 0:
+                        pass
                     case 1:
                         index = -1
                         for c in i.codes:
@@ -213,11 +221,9 @@ class Stream:
                                 self.checksum2[2 * index + 1] = val2
                     case 2:
                         self.finalize()
-                    case 3:
+                    case _:
                         self.frames.remove(i)
                         logging.warning("Removed invalid frame {} from stream".format(i))
-                    case _:
-                        pass
         if newframe:
             self.frames.append(Frame(pkt))
 

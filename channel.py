@@ -258,7 +258,7 @@ class Stream:
             self.handle_bad_data()
             return
         logging.debug("Got good checksum")
-        logging.info("Completed stream from {}".format(self.addr))
+        logging.info("Completed stream from {}: {}".format(self.addr, self.payload))
 
     def handle_bad_data(self):
         logging.error("Stream from {} was corrupted. Discarding data.".format(self.addr))

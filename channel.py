@@ -200,9 +200,9 @@ class Stream:
                             val2 = 0
                             # decode symbols to binary
                             match c:
-                                case 1:
+                                case -1 | 1:
                                     pass
-                                    # values are already set properly
+                                    # values are already set properly / unset
                                 case 2:
                                     val1 = 1
                                 case 3:
@@ -279,7 +279,6 @@ class Receiver:
         # Figure if packet pertains to us
         if not pkt.haslayer("DNS") or not pkt.haslayer("UDP") or pkt["UDP"].dport != 5353 or not pkt.haslayer("IP"):
             return
-        logging.debug("new packet: sport: {}, qclass: {}".format(pkt["UDP"].sport, pkt["DNS"].qd.qclass))
         newstream = True
         mess: Stream
         for mess in self.messages:

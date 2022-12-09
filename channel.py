@@ -88,12 +88,12 @@ class Message:
 
     def postabmle(self):
         # Transmit 0xFF
-        for b in range(0, 9):
-            # Hack to make the postable 9 packets long and force postamble processing of receiver.
-            if b == 8:
-                b = 7
+        for b in range(0, 8):
             p = mkpkt(self.base_port + b, 0)
             send(p)
+        #postamble hack
+        time.sleep(0.4)
+        send(mkpkt(self.base_port, 0))
         logging.debug("Sent postamble frame")
 
     def send(self):
@@ -240,7 +240,7 @@ class Stream:
                 return
             self.payload += data
             # Give it a big rx window tolerance
-            if lasttime != 0 and i.when - lasttime > 0.5:
+            if lasttime != 0 and i.when - lasttime > 0.6:
                 logging.error("Packet data out of order")
                 self.handle_bad_data()
                 return

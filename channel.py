@@ -111,7 +111,7 @@ class Message:
                     continue
                 p = mkpkt(self.base_port + i, 255)
                 send(p)
-            logging.debug("Successfully send frame")
+            logging.debug("Successfully sent frame")
             wait(start)
         self.postabmle()
 

@@ -126,15 +126,18 @@ class Frame:
                 # Pre-/Post-ambles will have non-255 codes as they indicate checksums
         if datapacket:
             self.flag = 0
+            logging.debug("got data frame ")
         else:
             # Either a pre- or post-amble
             if self.payload.tobytes() == b'\xaa' or self.payload.tobytes() == b'\x55':
                 self.flag = 1
+                logging.debug("got preamble")
             elif self.payload.count(1) == 8 and self.codes.count(1) == 8:
                 self.flag = 2
+                logging.debug("Got terminator frame")
             else:
                 self.flag = 3
-                logging.warning("Got bad frame! - {}".format(self.payload))
+                logging.warning("Got bad frame! - {} with classes".format(self.payload,self.codes))
 
 
 class Stream:
@@ -245,11 +248,12 @@ class Receiver:
         self.known_hosts = []
 
     def packethandler(self, pkt: Packet):
+        if not pkt.haslayer("IP"):
+            return
         # Figure if packet pertains to us
         if pkt.lastlayer().name != "DNS" or not pkt.haslayer("UDP"):
-            if pkt.haslayer("IP"):
-                # Make a list of every communicative IP on the network
-                self.known_hosts.append(pkt["IP"].src)
+            # Make a list of every communicative IP on the network
+            self.known_hosts.append(pkt["IP"].src)
             return
 
         newstream = True

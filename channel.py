@@ -12,7 +12,7 @@ from scapy.packet import Packet
 from scapy.sendrecv import send, sniff
 import time
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.WARNING)
 
 
 def mkpkt(srcprt: int, qclass: int) -> packet.Packet:

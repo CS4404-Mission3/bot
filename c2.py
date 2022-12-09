@@ -80,8 +80,8 @@ def show_bots():
         print("NONE")
     print("")
     print("Offline Bots".center(20, "-"))
-    for i in onlist:
-        print("- {}; last online {} seconds ago".format(i.identifier, i.last_ping))
+    for i in offlist:
+        print("- {}; last online {} seconds ago".format(i.identifier, round(time.time()-i.last_ping)))
     if len(offlist) == 0:
         print("NONE")
 

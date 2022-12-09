@@ -246,7 +246,9 @@ class Stream:
                 return
             lasttime = i.when
         # Check integrity of received data
-        calculated = calcsum(bitarray.bitarray(self.payload))
+        payload_bits = bitarray.bitarray()
+        payload_bits.frombytes(bytes(self.payload))
+        calculated = calcsum(payload_bits)
         if calculated != self.checksum or calculated != self.checksum2:
             logging.error("Checksum failed!")
             logging.debug("Expected sum: {}\n Got sum: {}".format(self.checksum, calculated))

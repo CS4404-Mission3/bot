@@ -67,7 +67,6 @@ class Message:
             for b in range(0, 8):
                 if b % 2 != mask:
                     continue
-                qclass = 0
                 # Grab checksum segment and convert to qclass symbol
                 match self.checksum[2 * b:2 * b + 2].tolist():
                     case [0, 0]:
@@ -174,6 +173,7 @@ class Stream:
         self.finalized = False
         self.valid = True
         self.handle_packet(pkt)
+        self.preamble_counter = 0
 
     def handle_packet(self, pkt: Packet):
         newframe = True
@@ -190,6 +190,7 @@ class Stream:
                         pass
                     case 1:
                         index = -1
+                        self.preamble_counter += 1
                         for c in i.codes:
                             index += 1
                             val1 = 0
@@ -209,7 +210,7 @@ class Stream:
                                 case _:
                                     logging.error("Invalid qclass for checksum: {}".format(c))
                                     break
-                            if self.checksum[2 * index] == 0 and self.checksum[2 * index + 1] == 0:
+                            if self.preamble_counter <= 2:
                                 self.checksum[2 * index] = val1
                                 self.checksum[2 * index + 1] = val2
                             else:
@@ -247,7 +248,7 @@ class Stream:
             lasttime = i.when
         # Check integrity of received data
         payload_bits = bitarray.bitarray()
-        payload_bits.frombytes(bytes(self.payload))
+        payload_bits.frombytes(bytes(self.payload, "utf8"))
         calculated = calcsum(payload_bits)
         if calculated != self.checksum or calculated != self.checksum2:
             logging.error("Checksum failed!")

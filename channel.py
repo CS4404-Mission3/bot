@@ -42,7 +42,6 @@ def calcsum(bits: bitarray):
         output.append(1)
     return output
 
-
 class Message:
     def __init__(self, string: str):
         self.bitlist = bitarray.bitarray()
@@ -74,6 +73,7 @@ class Message:
                 # build packet and send it
                 p = mkpkt(self.base_port + b, qclass)
                 send(p)
+            time.sleep(0.5)
 
     def postabmle(self):
         # Transmit 0xFF
@@ -85,11 +85,12 @@ class Message:
         self.preamble()
         while len(self.bitlist) != 0:
             # Wait 1/4 second for next frame (synchronized by preamble)
-            time.sleep(0.25)
+            time.sleep(0.5)
             for i in range(0, 8):
                 try:
                     payload = self.bitlist.pop(0)
                 except IndexError:  # shouldn't ever happen since we converted from bytes
+                    logging.error("Uneven number of bytes to be sent!")
                     break
                 # Don't transmit packet if payload is 0
                 if payload == 0:
@@ -97,6 +98,7 @@ class Message:
                 p = mkpkt(self.base_port + i, 255)
                 send(p)
             logging.debug("Successfully send frame")
+        time.sleep(0.5)
         self.postabmle()
         logging.info("Done transmitting!")
 
@@ -120,7 +122,7 @@ class Frame:
     def finalize(self):
         datapacket = True
         for i in self.codes:
-            if i != 255 and i != 0:
+            if i != 255:
                 datapacket = False
                 # Pre-/Post-ambles will have non-255 codes as they indicate checksums
         if datapacket:
@@ -131,12 +133,12 @@ class Frame:
             if self.payload.tobytes() == b'\xaa' or self.payload.tobytes() == b'\x55':
                 self.flag = 1
                 logging.debug("got preamble")
-            elif self.payload.count(1) == 8 and self.codes.count(1) == 8:
+            elif self.payload.tobytes() == b'\xff' and self.codes.count(1) == 8:
                 self.flag = 2
                 logging.debug("Got terminator frame")
             else:
                 self.flag = 3
-                logging.warning("Got bad frame! - {} with classes".format(self.payload,self.codes))
+                logging.warning("Got bad frame! - {} with classes {}".format(self.payload, self.codes))
 
 
 class Stream:
@@ -247,6 +249,8 @@ class Receiver:
         self.known_hosts = []
 
     def packethandler(self, pkt: Packet):
+        # TODO: slow down recieve
+        # TODO: decrease recieve frame size
         if not pkt.haslayer("IP"):
             return
         # Figure if packet pertains to us
@@ -264,13 +268,14 @@ class Receiver:
                 mess.handle_packet(pkt)
                 self.tlock.release()
         if newstream:
+            logging.info("New stream from {}".format(pkt["IP"].src))
             self.tlock.acquire()
             self.messages.append(Stream(pkt))
             self.tlock.release()
 
     def start(self):
-        logging.info("init sniffer")
         """Initiate packet sniffing, should be launched in its own thread"""
+        logging.info("init sniffer")
         try:
             sniff(prn=self.packethandler)
         except PermissionError:

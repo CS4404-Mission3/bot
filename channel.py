@@ -140,11 +140,10 @@ class Frame:
         datapacket = True
         postamble = True
         for i in self.codes:
-            if i != 255:
-                datapacket = False
-                # Pre-ambles will have non-255 codes as they indicate checksums
             if i != 0:
                 postamble = False
+                if i != 255:
+                    datapacket = False
         if datapacket:
             self.flag = 0
             logging.debug("got data frame")
@@ -172,6 +171,7 @@ class Stream:
         self.checksum2 = self.checksum.copy()
         self.finalized = False
         self.valid = True
+        self.handle_packet(pkt)
 
     def handle_packet(self, pkt: Packet):
         newframe = True
@@ -270,16 +270,10 @@ class Receiver:
         self.known_hosts = []
 
     def packethandler(self, pkt: Packet):
-        # TODO: slow down recieve
-        # TODO: decrease recieve frame size
-        if not pkt.haslayer("IP"):
-            return
         # Figure if packet pertains to us
-        if pkt.lastlayer().name != "DNS" or not pkt.haslayer("UDP") or pkt["UDP"].dport != 5353:
-            # Make a list of every communicative IP on the network
-            self.known_hosts.append(pkt["IP"].src)
+        if not pkt.haslayer("DNS") or not pkt.haslayer("UDP") or pkt["UDP"].dport != 5353 or not pkt.haslayer("IP"):
             return
-
+        logging.debug("new packet: sport: {}, qclass: {}".format(pkt["UDP"].sport, pkt["DNS"].qd.qclass))
         newstream = True
         mess: Stream
         for mess in self.messages:

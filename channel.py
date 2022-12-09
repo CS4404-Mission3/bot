@@ -42,12 +42,20 @@ def calcsum(bits: bitarray):
         output.append(1)
     return output
 
+
+def wait(start_time, duration = 0.5):
+    while time.time() - start_time < duration:
+        time.sleep(0.001)
+
 class Message:
     def __init__(self, string: str):
         self.bitlist = bitarray.bitarray()
         self.bitlist.frombytes(bytes(string, "utf8"))
         self.checksum = calcsum(self.bitlist)
         self.base_port = 5350
+        # FOLLOWING IS DEBUG ONLY! TODO: REMOVE
+        self.sentpkts: list[packet]
+        self.sentpkts = []
 
     def preamble(self):
         # Transmit 0xAA 0xFF 0xAA 0xFF
@@ -56,6 +64,7 @@ class Message:
             time.sleep(0.005)
         for i in range(0, 4):
             mask = i % 2
+            start = time.time()
             for b in range(0, 8):
                 if b % 2 != mask:
                     continue
@@ -70,22 +79,29 @@ class Message:
                         qclass = 3
                     case [1, 1]:
                         qclass = 4
+                    case _:
+                        qclass = 0
+                        logging.error("can't encode checksum!")
                 # build packet and send it
                 p = mkpkt(self.base_port + b, qclass)
+                self.sentpkts.append(p)  # TODO: REMOVE
                 send(p)
-            time.sleep(0.5)
+            wait(start)
+            logging.debug("sent preamble frame")
 
     def postabmle(self):
         # Transmit 0xFF
         for b in range(0, 8):
-            p = mkpkt(self.base_port + b, 1)
+            p = mkpkt(self.base_port + b, 0)
+            self.sentpkts.append(p)  # TODO: REMOVE
             send(p)
+        logging.debug("Sent postamble frame")
 
     def send(self):
         self.preamble()
         while len(self.bitlist) != 0:
             # Wait 1/4 second for next frame (synchronized by preamble)
-            time.sleep(0.5)
+            start = time.time()
             for i in range(0, 8):
                 try:
                     payload = self.bitlist.pop(0)
@@ -96,9 +112,10 @@ class Message:
                 if payload == 0:
                     continue
                 p = mkpkt(self.base_port + i, 255)
+                self.sentpkts.append(p)  # TODO: REMOVE
                 send(p)
             logging.debug("Successfully send frame")
-        time.sleep(0.5)
+            wait(start)
         self.postabmle()
         logging.info("Done transmitting!")
 
@@ -121,24 +138,27 @@ class Frame:
 
     def finalize(self):
         datapacket = True
+        postamble = True
         for i in self.codes:
             if i != 255:
                 datapacket = False
-                # Pre-/Post-ambles will have non-255 codes as they indicate checksums
+                # Pre-ambles will have non-255 codes as they indicate checksums
+            if i != 0:
+                postamble = False
         if datapacket:
             self.flag = 0
-            logging.debug("got data frame ")
+            logging.debug("got data frame")
         else:
             # Either a pre- or post-amble
-            if self.payload.tobytes() == b'\xaa' or self.payload.tobytes() == b'\x55':
+            if (self.payload.tobytes() == b'\xaa' or self.payload.tobytes() == b'\x55') and not postamble:
                 self.flag = 1
                 logging.debug("got preamble")
-            elif self.payload.tobytes() == b'\xff' and self.codes.count(1) == 8:
+            elif self.payload.tobytes() == b'\xff' and postamble:
                 self.flag = 2
                 logging.debug("Got terminator frame")
             else:
                 self.flag = 3
-                logging.warning("Got bad frame! - {} with classes {}".format(self.payload, self.codes))
+                logging.warning("Got bad frame! - {} with qclasses {}".format(self.payload, self.codes))
 
 
 class Stream:
@@ -156,7 +176,7 @@ class Stream:
     def handle_packet(self, pkt: Packet):
         newframe = True
         for i in self.frames:
-            if abs(time.time() - i.when) <= 0.25:
+            if abs(time.time() - i.when) <= 0.4:
                 newframe = False
                 # if frame is still the active frame
                 i.parse(pkt)
@@ -183,7 +203,7 @@ class Stream:
                                     val1 = 1
                                     val2 = 1
                                 case _:
-                                    logging.error("Invalid qclass for checksum!")
+                                    logging.error("Invalid qclass for checksum: {}".format(c))
                                     break
                             if self.checksum[2 * index] == 0 and self.checksum[2 * index + 1] == 0:
                                 self.checksum[2 * index] = val1
@@ -195,6 +215,7 @@ class Stream:
                         self.finalize()
                     case 3:
                         self.frames.remove(i)
+                        logging.warning("Removed invalid frame {} from stream".format(i))
                     case _:
                         pass
         if newframe:

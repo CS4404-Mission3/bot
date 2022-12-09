@@ -276,6 +276,9 @@ class Receiver:
         # Figure if packet pertains to us
         if not pkt.haslayer("DNS") or not pkt.haslayer("UDP") or pkt["UDP"].dport != 5353 or not pkt.haslayer("IP"):
             return
+        if pkt["IP"].src == get_if_addr(conf.iface):
+            # ignore our own transmissions
+            return
         newstream = True
         mess: Stream
         for mess in self.messages:

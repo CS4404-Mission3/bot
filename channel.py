@@ -44,7 +44,7 @@ def calcsum(bits: bitarray):
     return output
 
 
-def wait(start_time, duration=0.25):
+def wait(start_time, duration=0.5):
     while time.time() - start_time < duration:
         time.sleep(0.001)
 
@@ -92,7 +92,7 @@ class Message:
             p = mkpkt(self.base_port + b, 0)
             send(p)
         #postamble hack
-        time.sleep(0.25)
+        time.sleep(0.4)
         send(mkpkt(self.base_port, 0))
         logging.debug("Sent postamble frame")
 
@@ -178,7 +178,7 @@ class Stream:
     def handle_packet(self, pkt: Packet):
         newframe = True
         for i in self.frames:
-            if abs(time.time() - i.when) <= 0.15:
+            if abs(time.time() - i.when) <= 0.30:
                 newframe = False
                 # if frame is still the active frame
                 i.parse(pkt)
@@ -243,7 +243,7 @@ class Stream:
                 return
             self.payload += data
             # Give it a big rx window tolerance
-            if lasttime != 0 and i.when - lasttime > 0.4:
+            if lasttime != 0 and i.when - lasttime > 0.6:
                 logging.error("Packet data out of order")
                 self.handle_bad_data()
                 return

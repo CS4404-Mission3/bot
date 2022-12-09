@@ -173,7 +173,7 @@ class Stream:
         self.finalized = False
         self.valid = True
         self.handle_packet(pkt)
-        self.preamble_counter = 0
+        self.preamble_counter = -1
 
     def handle_packet(self, pkt: Packet):
         newframe = True
@@ -197,7 +197,9 @@ class Stream:
                             val2 = 0
                             # decode symbols to binary
                             match c:
-                                case -1 | 1:
+                                case -1:
+                                    continue
+                                case 1:
                                     pass
                                     # values are already set properly / unset
                                 case 2:
@@ -210,7 +212,7 @@ class Stream:
                                 case _:
                                     logging.error("Invalid qclass for checksum: {}".format(c))
                                     break
-                            if self.preamble_counter <= 2:
+                            if self.preamble_counter < 2:
                                 self.checksum[2 * index] = val1
                                 self.checksum[2 * index + 1] = val2
                             else:

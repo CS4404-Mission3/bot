@@ -54,16 +54,13 @@ class Message:
         self.bitlist.frombytes(bytes(string, "utf8"))
         self.checksum = calcsum(self.bitlist)
         self.base_port = 5350
-        # FOLLOWING IS DEBUG ONLY! TODO: REMOVE
-        self.sentpkts: list[packet]
-        self.sentpkts = []
 
     def preamble(self):
         # Transmit 0xAA 0xFF 0xAA 0xFF
         while round(time.time(), 2) - round(time.time()) != 0.0:
             # wait until next second to start transmission
             time.sleep(0.005)
-        logging.debug("Started transmission at {}".format(time.time()))
+
         for i in range(0, 4):
             mask = i % 2
             start = time.time()
@@ -86,16 +83,16 @@ class Message:
                         logging.error("can't encode checksum!")
                 # build packet and send it
                 p = mkpkt(self.base_port + b, qclass)
-                self.sentpkts.append(p)  # TODO: REMOVE
                 send(p)
             wait(start)
-        logging.debug("finished preamble at {}".format(time.time()))
 
     def postabmle(self):
         # Transmit 0xFF
-        for b in range(0, 8):
+        for b in range(0, 9):
+            # Hack to make the postable 9 packets long and force postamble processing of receiver.
+            if b == 8:
+                b = 7
             p = mkpkt(self.base_port + b, 0)
-            self.sentpkts.append(p)  # TODO: REMOVE
             send(p)
         logging.debug("Sent postamble frame")
 
@@ -114,12 +111,10 @@ class Message:
                 if payload == 0:
                     continue
                 p = mkpkt(self.base_port + i, 255)
-                self.sentpkts.append(p)  # TODO: REMOVE
                 send(p)
             logging.debug("Successfully send frame")
             wait(start)
         self.postabmle()
-        logging.info("Done transmitting at {}!".format(time.time()))
 
 
 class Frame:
@@ -245,7 +240,7 @@ class Stream:
                 return
             self.payload += data
             # Give it a big rx window tolerance
-            if lasttime != 0 and i.when - lasttime > 0.4:
+            if lasttime != 0 and i.when - lasttime > 0.5:
                 logging.error("Packet data out of order")
                 self.handle_bad_data()
                 return
@@ -263,10 +258,6 @@ class Stream:
     def handle_bad_data(self):
         logging.error("Stream from {} was corrupted. Discarding data.".format(self.addr))
         self.valid = False
-        # Ask for packet retransmission
-        a = threading.Thread(target=Message("rtm").send)
-        a.start()
-        logging.info("requested retransmission of stream")
 
 
 class Receiver:

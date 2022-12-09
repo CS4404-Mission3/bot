@@ -254,7 +254,7 @@ class Stream:
         calculated = calcsum(payload_bits)
         if calculated != self.checksum or calculated != self.checksum2:
             logging.error("Checksum failed!")
-            logging.debug("Expected sum: {}\n Got sum: {}".format(self.checksum, calculated))
+            logging.debug("Expected sums: {}, {}\n Got sum: {}".format(self.checksum, self.checksum2, calculated))
             self.handle_bad_data()
             return
         logging.debug("Got good checksum")
@@ -282,7 +282,12 @@ class Receiver:
         newstream = True
         mess: Stream
         for mess in self.messages:
-            if mess.addr == pkt["IP"].src:
+            if not mess.valid:
+                self.tlock.acquire(blocking=True, timeout=0.25)
+                self.messages.remove(mess)
+                self.tlock.release()
+                continue
+            elif mess.addr == pkt["IP"].src and not mess.finalized:
                 newstream = False
                 self.tlock.acquire(blocking=True, timeout=0.25)
                 mess.handle_packet(pkt)

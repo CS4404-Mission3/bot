@@ -87,7 +87,7 @@ def show_bots():
 
 
 def test_conn():
-    global botlist, lastpingsent
+    global botlist, lastpingsent, rx
     # Command: send back ok response
     # Example response: "r0001ok"
     # Breakdown of ex: 1st char: message is response, 2nd-5th char: bot ID, 6th-7th chars: ok message
@@ -117,6 +117,7 @@ def test_conn():
 
 
 def show_info():
+    global rx
     # Command: respond with sys info (space separated)
     target = get_target()
     send("info", target)

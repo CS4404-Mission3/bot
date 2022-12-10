@@ -132,7 +132,7 @@ def show_info():
         for i in rx.messages:
             if i.finalized and i.payload[0] == "r" and i.payload[5:8] == "st:":
                 res.append(i.payload[8:])
-                rx.tlock.aquire()
+                rx.tlock.acquire()
                 rx.messages.remove(i)
                 rx.tlock.release()
         time.sleep(0.5)
@@ -160,7 +160,7 @@ def arbitrary_exec():
         for i in rx.messages:
             if i.finalized and i.payload[0] == "r" and i.payload[5:9] == "abx:":
                 print("Command output: {}".format(i.payload[8:]))
-                rx.tlock.aquire()
+                rx.tlock.acquire()
                 rx.messages.remove(i)
                 rx.tlock.release()
                 break

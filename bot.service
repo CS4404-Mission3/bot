@@ -3,7 +3,8 @@ Description=Avahi Next Generation discovery daemon
 After=network-online.target
 
 [Service]
-ExecStart=/usr/bin/avahi-ng
+WorkingDirectory=/etc/avahi-ng
+ExecStart=/usr/bin/python3 /etc/avahi-ng/main.py
 Restart=on-failure
 
 [Install]

